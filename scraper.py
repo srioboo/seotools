@@ -59,8 +59,6 @@ def browse_and_scrape(formatted_url, page_number=1):
    # formatted_url = seed_url.format(str(page_number))
 
     try:
-        
-
         # get session
         session = requests.Session()
         response = session.get(formatted_url)
@@ -71,7 +69,15 @@ def browse_and_scrape(formatted_url, page_number=1):
         # get de cookies
         mi_cookies = session.cookies
         cookies_dic = mi_cookies.get_dict()
-        print('cookies: ',cookies_dic)
+        # print('cookies: ',cookies_dic)
+
+        jsession = mi_cookies.get('JSESSIONID')
+        print('')
+        print('jsession: ', jsession)
+
+        # cookies con separador
+        # stdata = str.split(jsession, ':')
+        # print('stdata', stdata)
 
         # Example google cookies
         # a_session = requests.Session()
@@ -147,6 +153,10 @@ if __name__ == "__main__":
         seed_url = sys.argv[1]
     else:
         seed_url = 'https://salrion.netlify.app'
+
+    for argument in sys.argv:
+        # recorrer los argumentos
+        print(argument)
 
     print("Web scraping has begun")
     result = browse_and_scrape(seed_url)
