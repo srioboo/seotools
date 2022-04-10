@@ -5,6 +5,10 @@ import csv
 import re
 from bs4 import BeautifulSoup
 
+def scrape_menu(source, soup):
+    # categories
+    categories = soup.find_all('div', id_="mainmenu")
+
 # this is an example to scrape a book
 def scrape(source_url, soup):  # Takes the driver and the subdomain for concats as params
     # Find the elements of the article tag
@@ -41,6 +45,13 @@ def console_print(data, value):
     print(data)
     print(f'\t{value}')
     print("")
+
+def head_data(soup):
+    metatitle = (soup.find('title')).get_text()
+    console_print("metatile: ", metatitle)
+
+    metadescription = soup.find('meta',attrs={'name':'description'})["content"]
+    console_print("metadescription: ", metadescription)
 
 # this get the data
 # TODO rename it to a propper name
@@ -90,11 +101,7 @@ def browse_and_scrape(formatted_url, page_number=1):
         soup = BeautifulSoup(html_text, "html.parser")
         console_print('Now Scraping:', formatted_url)
 
-        metatitle = (soup.find('title')).get_text()
-        console_print("metatile: ", metatitle)
-
-        metadescription = soup.find('meta',attrs={'name':'description'})["content"]
-        console_print("metadescription: ", metadescription)
+        head_data(soup)
 
         # robots_directives = soup.find('meta',attrs={'name':'robots'})["content"].split(",")
         # robots_directives = soup.find('meta',attrs={'name':'robots'})["content"]
