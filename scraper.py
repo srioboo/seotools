@@ -9,8 +9,14 @@ def scrape_menu(soup):
     # categories
     # categories = soup.find(id='menu_')
     categories = soup.select("a[class^='menu_']")
-    # for cat in categories:
-    #    print(cat['href'])
+
+    for cat in categories:
+        url = cat['href']
+        catnum = cat['id']
+        catid = cat['data-catid']
+
+        write_to_csv([catid,catnum,url], 'data_menu')
+        write_to_csv([url], 'data_url')
     print('Categories tree: ', len(categories))
 
 # this is an example to scrape a book
@@ -38,10 +44,11 @@ def scrape(source_url, soup):  # Takes the driver and the subdomain for concats 
 def write_to_csv(list_input, file_name='data'):
     # The scraped info will be written to a CSV here.
     try:
-        with open(f'{file_name}.csv', "a") as fopen:  # Open the csv file.
+        with open(f'{file_name}.csv', "a", encoding='UTF8', newline='') as fopen:  # Open the csv file.
             csv_writer = csv.writer(fopen)
             csv_writer.writerow(list_input)
     except:
+        print('excpet')
         return False
 
 # Auxiliary method to print data in a formatted way
