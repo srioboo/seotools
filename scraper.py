@@ -46,12 +46,59 @@ def console_print(data, value):
     print(f'\t{value}')
     print("")
 
-def head_data(soup):
+# get head metadata
+def get_head_metadata(soup):
+
+    # get title
     metatitle = (soup.find('title')).get_text()
     console_print("metatile: ", metatitle)
 
+    # get metadescription
     metadescription = soup.find('meta',attrs={'name':'description'})["content"]
     console_print("metadescription: ", metadescription)
+
+    # get metarobots
+    if soup.find('meta',attrs={'name':'robots'}) != None:
+        robots_directives = soup.find('meta',attrs={'name':'robots'})["content"].split(",")
+        console_print('Directivas robot',robots_directives)
+        write_to_csv(robots_directives)
+    else:
+        console_print("Directivas robot", "not found")
+
+    # get viewport
+    viewport = soup.find('meta',attrs={'name':'viewport'})["content"]
+    console_print('Vieport:', viewport)
+
+    # get charset
+    charset = soup.find('meta',attrs={'charset':True})["charset"]
+    console_print('Charset: ', charset)
+
+# get canonical and hreflang
+def get_canonical_hreflang(soup):
+    
+    # canonical
+    if soup.find('link',attrs={'rel':'canonical'}) != None:
+        canonical = soup.find('link',attrs={'rel':'canonical'})["href"]
+        console_print('Canonical: ', canonical)
+    else:
+        console_print('Canonical: ', 'not found')
+
+    # hreflang
+    list_hreflangs = [[a['href'], a["hreflang"]] for a in soup.find_all('link', href=True, hreflang=True)]
+    console_print('Hreflangs: ', list_hreflangs)
+
+# get language
+def get_lang(soup):
+    html_language = soup.find('html')["lang"]
+    console_print('Html language: ', html_language)
+
+# get media
+def get_media(soup):
+    if soup.find('link',attrs={'media':'only screen and (max-width: 640px)'}) != None:
+        mobile_alternate = soup.find('link',attrs={'media':'only screen and (max-width: 640px)'})["href"]
+        console_print('Mobile alternate: ', mobile_alternate)
+    else:    
+        console_print('Mobile alternate: ', 'not found')
 
 # this get the data
 # TODO rename it to a propper name
@@ -101,41 +148,17 @@ def browse_and_scrape(formatted_url, page_number=1):
         soup = BeautifulSoup(html_text, "html.parser")
         console_print('Now Scraping:', formatted_url)
 
-        head_data(soup)
+        # get head metadata
+        get_head_metadata(soup)
 
-        # robots_directives = soup.find('meta',attrs={'name':'robots'})["content"].split(",")
-        # robots_directives = soup.find('meta',attrs={'name':'robots'})["content"]
+        # get canonical and hreflang
+        get_canonical_hreflang(soup)
 
-        if soup.find('meta',attrs={'name':'robots'}) != None:
-            robots_directives = soup.find('meta',attrs={'name':'robots'})["content"].split(",")
-            console_print('Directivas robot',robots_directives)
-            write_to_csv(robots_directives)
-        else:
-            console_print("Directivas robot", "not found")
+        # get language
+        get_lang(soup)
 
-        viewport = soup.find('meta',attrs={'name':'viewport'})["content"]
-        console_print('Vieport:', viewport)
-
-        charset = soup.find('meta',attrs={'charset':True})["charset"]
-        console_print('Charset: ', charset)
-
-        html_language = soup.find('html')["lang"]
-        console_print('Html language: ', html_language)
-
-        if soup.find('link',attrs={'rel':'canonical'}) != None:
-            canonical = soup.find('link',attrs={'rel':'canonical'})["href"]
-            console_print('Canonical: ', canonical)
-        else:
-            console_print('Canonical: ', 'not found')
-
-        list_hreflangs = [[a['href'], a["hreflang"]] for a in soup.find_all('link', href=True, hreflang=True)]
-        console_print('Hreflangs: ', list_hreflangs)
-
-        if soup.find('link',attrs={'media':'only screen and (max-width: 640px)'}) != None:
-            mobile_alternate = soup.find('link',attrs={'media':'only screen and (max-width: 640px)'})["href"]
-            console_print('Mobile alternate: ', mobile_alternate)
-        else:    
-            console_print('Mobile alternate: ', 'not found')
+        # get media
+        get_media(soup)
 
         # This if clause stops the script when it hits an empty page
         if soup.find("hreflang", class_="next") != None:
