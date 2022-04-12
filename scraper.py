@@ -5,9 +5,13 @@ import csv
 import re
 from bs4 import BeautifulSoup
 
-def scrape_menu(source, soup):
+def scrape_menu(soup):
     # categories
-    categories = soup.find_all('div', id_="mainmenu")
+    # categories = soup.find(id='menu_')
+    categories = soup.select("a[class^='menu_']")
+    # for cat in categories:
+    #    print(cat['href'])
+    print('Categories tree: ', len(categories))
 
 # this is an example to scrape a book
 def scrape(source_url, soup):  # Takes the driver and the subdomain for concats as params
@@ -100,6 +104,35 @@ def get_media(soup):
     else:    
         console_print('Mobile alternate: ', 'not found')
 
+# alter cookies
+def alter_cookie(session):
+    # get de cookies
+    mi_cookies = session.cookies
+    cookies_dic = mi_cookies.get_dict()
+    # print('cookies: ',cookies_dic)
+
+    jsession = mi_cookies.get('JSESSIONID')
+    print('')
+    print('jsession: ', jsession)
+
+    jsession_arr = jsession.split(':')
+    print('jsession: ', jsession_arr[1])
+
+    nodes_arr = ['c1pro01','c1pro02','c1pro03','c1pro04','c2pro01','c2pro02','c2pro03','c2pro04']
+
+    for i in range(len(nodes_arr)):
+        jsession_alt = jsession.replace(':' + jsession_arr[1], ':' + nodes_arr[i])
+        print('test: ', jsession_alt)
+
+    # session.cookies.set('JSESSIONID', jsession_alt, domain='www.midominio.com')
+
+    # Example google cookies
+    # a_session = requests.Session()
+    # a_session.get('https://google.com/')
+    # session_cookies = a_session.cookies
+    # cookies_dictionary = session_cookies.get_dict()
+    # print('Google cookies: ',cookies_dictionary)
+
 # this get the data
 # TODO rename it to a propper name
 def browse_and_scrape(formatted_url, page_number=1):
@@ -108,13 +141,6 @@ def browse_and_scrape(formatted_url, page_number=1):
     print(url_pat)
     print(formatted_url)
     source_url = url_pat.search(formatted_url)
-    
-    # .group(0)
-    source_url = source_url.group(0)
-    print(source_url)
-
-   # Page_number from the argument gets formatted in the URL & Fetched
-   # formatted_url = seed_url.format(str(page_number))
 
     try:
         # get session
@@ -124,41 +150,26 @@ def browse_and_scrape(formatted_url, page_number=1):
         # get de text
         html_text = response.text
 
-        # get de cookies
-        mi_cookies = session.cookies
-        cookies_dic = mi_cookies.get_dict()
-        # print('cookies: ',cookies_dic)
-
-        jsession = mi_cookies.get('JSESSIONID')
-        print('')
-        print('jsession: ', jsession)
-
-        # cookies con separador
-        # stdata = str.split(jsession, ':')
-        # print('stdata', stdata)
-
-        # Example google cookies
-        # a_session = requests.Session()
-        # a_session.get('https://google.com/')
-        # session_cookies = a_session.cookies
-        # cookies_dictionary = session_cookies.get_dict()
-        # print('Google cookies: ',cookies_dictionary)
+        # alter cookies
+        alter_cookie(session)
 
         # Prepare the soup
         soup = BeautifulSoup(html_text, "html.parser")
         console_print('Now Scraping:', formatted_url)
 
+        scrape_menu(soup)
+
         # get head metadata
-        get_head_metadata(soup)
+        # get_head_metadata(soup)
 
         # get canonical and hreflang
-        get_canonical_hreflang(soup)
+        # get_canonical_hreflang(soup)
 
         # get language
-        get_lang(soup)
+        # get_lang(soup)
 
         # get media
-        get_media(soup)
+        # get_media(soup)
 
         # This if clause stops the script when it hits an empty page
         if soup.find("hreflang", class_="next") != None:
