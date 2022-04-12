@@ -5,19 +5,23 @@ import csv
 import re
 from bs4 import BeautifulSoup
 
-def scrape_menu(soup):
+def scrape_menu(soup, base_url='', language=''):
     # categories
     # categories = soup.find(id='menu_')
     categories = soup.select("a[class^='menu_']")
+
+    # file namess
+    csv_menu_file = 'data_menu' + '_' + base_url + '_' + language
+    csv_url_file = 'data_url' + '_' + base_url + '_' + language
 
     for cat in categories:
         url = cat['href']
         catnum = cat['id']
         catid = cat['data-catid']
 
-        write_to_csv([catid,catnum,url], 'data_menu')
-        write_to_csv([url], 'data_url')
-    print('Categories tree: ', len(categories))
+        write_to_csv([catid,catnum,url], csv_menu_file)
+        write_to_csv([url], csv_url_file)
+    log('Categories tree: ', len(categories))
 
 # this is an example to scrape a book
 def scrape(source_url, soup):  # Takes the driver and the subdomain for concats as params
@@ -48,11 +52,10 @@ def write_to_csv(list_input, file_name='data'):
             csv_writer = csv.writer(fopen)
             csv_writer.writerow(list_input)
     except:
-        print('excpet')
         return False
 
 # Auxiliary method to print data in a formatted way
-def console_print(data, value):
+def log(data, value):
     print(data)
     print(f'\t{value}')
     print("")
@@ -62,76 +65,76 @@ def get_head_metadata(soup):
 
     # get title
     metatitle = (soup.find('title')).get_text()
-    console_print("metatile: ", metatitle)
+    log("metatile: ", metatitle)
 
     # get metadescription
     metadescription = soup.find('meta',attrs={'name':'description'})["content"]
-    console_print("metadescription: ", metadescription)
+    log("metadescription: ", metadescription)
 
     # get metarobots
     if soup.find('meta',attrs={'name':'robots'}) != None:
         robots_directives = soup.find('meta',attrs={'name':'robots'})["content"].split(",")
-        console_print('Directivas robot',robots_directives)
+        log('Directivas robot',robots_directives)
         write_to_csv(robots_directives)
     else:
-        console_print("Directivas robot", "not found")
+        log("Directivas robot", "not found")
 
     # get viewport
     viewport = soup.find('meta',attrs={'name':'viewport'})["content"]
-    console_print('Vieport:', viewport)
+    log('Vieport:', viewport)
 
     # get charset
     charset = soup.find('meta',attrs={'charset':True})["charset"]
-    console_print('Charset: ', charset)
+    log('Charset: ', charset)
 
 # get canonical and hreflang
-def get_canonical_hreflang(soup):
+def get_canonical(soup):
     
     # canonical
     if soup.find('link',attrs={'rel':'canonical'}) != None:
         canonical = soup.find('link',attrs={'rel':'canonical'})["href"]
-        console_print('Canonical: ', canonical)
+        log('Canonical: ', canonical)
     else:
-        console_print('Canonical: ', 'not found')
+        log('Canonical: ', 'not found')
 
+# get canonical and hreflang
+def get_hreflang(soup):
     # hreflang
     list_hreflangs = [[a['href'], a["hreflang"]] for a in soup.find_all('link', href=True, hreflang=True)]
-    console_print('Hreflangs: ', list_hreflangs)
+    # log('Hreflangs: ', list_hreflangs)
+    return list_hreflangs
 
 # get language
 def get_lang(soup):
     html_language = soup.find('html')["lang"]
-    console_print('Html language: ', html_language)
+    log('Html language: ', html_language)
 
 # get media
 def get_media(soup):
     if soup.find('link',attrs={'media':'only screen and (max-width: 640px)'}) != None:
         mobile_alternate = soup.find('link',attrs={'media':'only screen and (max-width: 640px)'})["href"]
-        console_print('Mobile alternate: ', mobile_alternate)
+        log('Mobile alternate: ', mobile_alternate)
     else:    
-        console_print('Mobile alternate: ', 'not found')
+        log('Mobile alternate: ', 'not found')
 
 # alter cookies
-def alter_cookie(session):
+def alter_cookie(session, node):
     # get de cookies
     mi_cookies = session.cookies
     cookies_dic = mi_cookies.get_dict()
-    # print('cookies: ',cookies_dic)
+    # log('cookies: ',cookies_dic)
 
+    # get searched cookie
     jsession = mi_cookies.get('JSESSIONID')
-    print('')
-    print('jsession: ', jsession)
+    # log('jsession: ', jsession)
 
     jsession_arr = jsession.split(':')
-    print('jsession: ', jsession_arr[1])
 
-    nodes_arr = ['c1pro01','c1pro02','c1pro03','c1pro04','c2pro01','c2pro02','c2pro03','c2pro04']
+    # for i in range(len(nodes_arr)):
+    jsession_alt = jsession.replace(':' + jsession_arr[1], ':' + node)
+    print('jsession_new: ', jsession_alt)
 
-    for i in range(len(nodes_arr)):
-        jsession_alt = jsession.replace(':' + jsession_arr[1], ':' + nodes_arr[i])
-        print('test: ', jsession_alt)
-
-    # session.cookies.set('JSESSIONID', jsession_alt, domain='www.midominio.com')
+    session.cookies.set('JSESSIONID', jsession_alt, domain='www.midomain.com')
 
     # Example google cookies
     # a_session = requests.Session()
@@ -143,53 +146,55 @@ def alter_cookie(session):
 # this get the data
 # TODO rename it to a propper name
 def browse_and_scrape(formatted_url, page_number=1):
-    # Fetch the URL - We will be using this to append to images and info routes
-    url_pat = re.compile(r"(https://*.*.*)")
-    print(url_pat)
-    print(formatted_url)
-    source_url = url_pat.search(formatted_url)
+
+    # nodes
+    nodes_arr = ['c1pro01','c1pro02','c1pro03','c1pro04','c2pro01','c2pro02','c2pro03','c2pro04']
 
     try:
         # get session
         session = requests.Session()
         response = session.get(formatted_url)
-
-        # get de text
-        html_text = response.text
-
-        # alter cookies
-        alter_cookie(session)
-
-        # Prepare the soup
-        soup = BeautifulSoup(html_text, "html.parser")
-        console_print('Now Scraping:', formatted_url)
-
-        scrape_menu(soup)
-
+        
         # get head metadata
         # get_head_metadata(soup)
 
-        # get canonical and hreflang
-        # get_canonical_hreflang(soup)
+        # get canonical
+        # get_canonical(soup)
 
+        
         # get language
         # get_lang(soup)
 
         # get media
         # get_media(soup)
 
-        # This if clause stops the script when it hits an empty page
-        if soup.find("hreflang", class_="next") != None:
-            # scrape(formatted_url, soup)     # Invoke the scrape function
+        # alter cookies
+        for i in range(len(nodes_arr)):
+            alter_cookie(session, nodes_arr[i])
+
+            # after alter session get data and get text
+            response = session.get(formatted_url)
+            # get de text
+            html_text = response.text
+
+            # Prepare the soup
+            soup = BeautifulSoup(html_text, "html.parser")
+            # log('Now Scraping:', formatted_url)
+
+            # get canonical and hreflang
+            list_hreflangs = get_hreflang(soup)
+            # log('Hreflangs: ', list_hreflangs)
+
+            # hreflang loop
+            # for x in list_hreflangs:
+            #    print(str(x))
+
             # Be a responsible citizen by waiting before you hit again
             time.sleep(3)
-            # page_number += 1
-            # Recursively invoke the same function with the increment
-            # browse_and_scrape(seed_url, page_number)
-        else:
-            print("Entering scrape")
-            scrape(formatted_url, soup)     # The script exits here
-            return True
+
+            # scrape menu data
+            scrape_menu(soup)
+
         return True
     except Exception as e:
         print(e)
