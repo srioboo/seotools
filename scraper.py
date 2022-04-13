@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 # get data from a web menu
 def scrape_menu(soup, base_url='', language=''):
     # categories
-    # categories = soup.find(id='menu_')
     categories = soup.select("a[class^='menu_']")
 
     # file namess
@@ -21,8 +20,8 @@ def scrape_menu(soup, base_url='', language=''):
         catid = cat['data-catid']
 
         write_to_csv([catid,catnum,url], csv_menu_file)
-        write_to_csv([url], csv_url_file)
-    print('Categories tree size: ', len(categories))
+        # write_to_csv([url], csv_url_file)
+    print('Generated tree categories csv: ', csv_menu_file)
 
 # this is an example to scrape a book
 def scrape(source_url, soup):  # Takes the driver and the subdomain for concats as params
@@ -85,8 +84,8 @@ def get_head_metadata(soup):
     log('Vieport:', viewport)
 
     # get charset
-    charset = soup.find('meta',attrs={'charset':True})["charset"]
-    log('Charset: ', charset)
+    # charset = soup.find('meta',attrs={'charset':True})["charset"]
+    # log('Charset: ', charset)
 
 # get canonical and hreflang
 def get_canonical(soup):
@@ -167,11 +166,30 @@ def get_full_seo_data(soup):
     # get canonical
     get_canonical(soup)
     
+    # get canonical and hreflang
+    list_hreflangs = get_hreflang(soup)
+    # hreflang loop
+    for x in list_hreflangs:
+        print(str(x))
+
     # get language
     get_lang(soup)
 
     # get media
-    get_media(soup)
+    # get_media(soup)
+
+# get data to parse
+def get_soup(session, formatted_url):
+    # after alter session get data and get text
+    response = session.get(formatted_url)
+    # get de text
+    html_text = response.text
+
+    # Prepare the soup
+    soup = BeautifulSoup(html_text, "html.parser")
+    
+    # retur soup
+    return soup
 
 # this get the data
 def browse_and_scrape(formatted_url, choice=1):
@@ -182,16 +200,12 @@ def browse_and_scrape(formatted_url, choice=1):
     try:
         # get session
         session = requests.Session()
+        # first get to cookie
         response = session.get(formatted_url)
         
         if choice == 1:
-            # after alter session get data and get text
-            response = session.get(formatted_url)
-            # get de text
-            html_text = response.text
-
-            # Prepare the soup
-            soup = BeautifulSoup(html_text, "html.parser")
+            # get data
+            soup = get_soup(session, formatted_url)
             get_full_seo_data(soup) 
 
         elif choice == 2:
@@ -199,28 +213,38 @@ def browse_and_scrape(formatted_url, choice=1):
             for i in range(len(nodes_arr)):
                 alter_cookie(session, nodes_arr[i])
 
-                # after alter session get data and get text
-                response = session.get(formatted_url)
-                # get de text
-                html_text = response.text
-
-                # Prepare the soup
-                soup = BeautifulSoup(html_text, "html.parser")
-                # log('Now Scraping:', formatted_url)
-
-                # get canonical and hreflang
-                list_hreflangs = get_hreflang(soup)
-                # log('Hreflangs: ', list_hreflangs)
-
-                # hreflang loop
-                # for x in list_hreflangs:
-                #    print(str(x))
+                # get the soup for each cookie alteration
+                soup = get_soup(session, formatted_url)
 
                 # Be a responsible citizen by waiting before you hit again
                 time.sleep(3)
 
-                # scrape menu data
-                scrape_menu(soup)
+                # categories
+                categories = soup.select("a[class^='menu_']")
+                print('Categories tree size: ', len(categories))
+
+        elif choice == 3:
+            # get the soup for each cookie alteration
+            soup = get_soup(session, formatted_url)
+
+            # get canonical and hreflang
+            list_hreflangs = get_hreflang(soup)
+            # log('Hreflangs: ', list_hreflangs) 
+
+            # hreflang loop
+            for x in list_hreflangs:
+                # print(str(x))
+                new_url = x[0]
+                new_lang = x[1]
+                
+                if "-" in new_lang:
+                    # go to all hreflang and search empty url
+                    # get data
+                    soup = get_soup(session, formatted_url)
+                    # scrape menu data
+                    scrape_menu(soup, '', new_lang)
+            print("grep 'Category_' *.csv")        
+
         else:
             help_message()        
 
@@ -235,6 +259,7 @@ def help_message():
     print("acepted parameters")
     print("-s -> get seo data")
     print("-m -> test if menus in nodes are correct")
+    print("-u -> list not SEO compilant urls")
     print("only one is allowed")
     print("Do you need a valid url")
 
@@ -257,7 +282,9 @@ if __name__ == "__main__":
         elif argument == '-s':
             choice = 1
         elif argument == '-m':
-            choice = 2    
+            choice = 2
+        elif argument == '-u':
+            choice = 3    
 
         # print(is_url(argument))
         # print(argument)
