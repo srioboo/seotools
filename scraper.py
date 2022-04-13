@@ -5,6 +5,7 @@ import csv
 import re
 from bs4 import BeautifulSoup
 
+# get data from a web menu
 def scrape_menu(soup, base_url='', language=''):
     # categories
     # categories = soup.find(id='menu_')
@@ -21,7 +22,7 @@ def scrape_menu(soup, base_url='', language=''):
 
         write_to_csv([catid,catnum,url], csv_menu_file)
         write_to_csv([url], csv_url_file)
-    log('Categories tree: ', len(categories))
+    print('Categories tree size: ', len(categories))
 
 # this is an example to scrape a book
 def scrape(source_url, soup):  # Takes the driver and the subdomain for concats as params
@@ -134,7 +135,7 @@ def alter_cookie(session, node):
     jsession_alt = jsession.replace(':' + jsession_arr[1], ':' + node)
     print('jsession_new: ', jsession_alt)
 
-    session.cookies.set('JSESSIONID', jsession_alt, domain='www.midomain.com')
+    session.cookies.set('JSESSIONID', jsession_alt, domain='www.mayoral.com')
 
     # Example google cookies
     # a_session = requests.Session()
@@ -143,9 +144,37 @@ def alter_cookie(session, node):
     # cookies_dictionary = session_cookies.get_dict()
     # print('Google cookies: ',cookies_dictionary)
 
+# test if it have an url format
+def is_url(formatted_url):
+
+    is_url = False
+
+    # Fetch the URL - We will be using this to append to images and info routes
+    url_pat = re.compile(r"(https://*.*.*)")
+    # print(url_pat)
+    # print(formatted_url)
+    source_url = url_pat.search(formatted_url)
+    # print(source_url)
+    if source_url != None:
+        is_url = True
+    return is_url
+
+# get seo data
+def get_full_seo_data(soup):
+    # get head metadata
+    get_head_metadata(soup)
+
+    # get canonical
+    get_canonical(soup)
+    
+    # get language
+    get_lang(soup)
+
+    # get media
+    get_media(soup)
+
 # this get the data
-# TODO rename it to a propper name
-def browse_and_scrape(formatted_url, page_number=1):
+def browse_and_scrape(formatted_url, choice=1):
 
     # nodes
     nodes_arr = ['c1pro01','c1pro02','c1pro03','c1pro04','c2pro01','c2pro02','c2pro03','c2pro04']
@@ -155,23 +184,7 @@ def browse_and_scrape(formatted_url, page_number=1):
         session = requests.Session()
         response = session.get(formatted_url)
         
-        # get head metadata
-        # get_head_metadata(soup)
-
-        # get canonical
-        # get_canonical(soup)
-
-        
-        # get language
-        # get_lang(soup)
-
-        # get media
-        # get_media(soup)
-
-        # alter cookies
-        for i in range(len(nodes_arr)):
-            alter_cookie(session, nodes_arr[i])
-
+        if choice == 1:
             # after alter session get data and get text
             response = session.get(formatted_url)
             # get de text
@@ -179,41 +192,83 @@ def browse_and_scrape(formatted_url, page_number=1):
 
             # Prepare the soup
             soup = BeautifulSoup(html_text, "html.parser")
-            # log('Now Scraping:', formatted_url)
+            get_full_seo_data(soup) 
 
-            # get canonical and hreflang
-            list_hreflangs = get_hreflang(soup)
-            # log('Hreflangs: ', list_hreflangs)
+        elif choice == 2:
+            # alter cookies
+            for i in range(len(nodes_arr)):
+                alter_cookie(session, nodes_arr[i])
 
-            # hreflang loop
-            # for x in list_hreflangs:
-            #    print(str(x))
+                # after alter session get data and get text
+                response = session.get(formatted_url)
+                # get de text
+                html_text = response.text
 
-            # Be a responsible citizen by waiting before you hit again
-            time.sleep(3)
+                # Prepare the soup
+                soup = BeautifulSoup(html_text, "html.parser")
+                # log('Now Scraping:', formatted_url)
 
-            # scrape menu data
-            scrape_menu(soup)
+                # get canonical and hreflang
+                list_hreflangs = get_hreflang(soup)
+                # log('Hreflangs: ', list_hreflangs)
+
+                # hreflang loop
+                # for x in list_hreflangs:
+                #    print(str(x))
+
+                # Be a responsible citizen by waiting before you hit again
+                time.sleep(3)
+
+                # scrape menu data
+                scrape_menu(soup)
+        else:
+            help_message()        
 
         return True
     except Exception as e:
         print(e)
         return e
 
+# Print help message
+def help_message():
+    print("Help message:")
+    print("acepted parameters")
+    print("-s -> get seo data")
+    print("-m -> test if menus in nodes are correct")
+    print("only one is allowed")
+    print("Do you need a valid url")
+
+# main method
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        # print(sys.argv[1])
-        seed_url = sys.argv[1]
-    else:
-        seed_url = 'https://salrion.netlify.app'
+    # test if there are args
+    # if len(sys.argv) == 2:
+    #    seed_url = sys.argv[1]
+    # else:
+    #    seed_url = 'https://salrion.netlify.app'
+
+    # base seed url
+    seed_url = 'https://salrion.netlify.app'
+    choice = 0
 
     for argument in sys.argv:
-        # recorrer los argumentos
-        print(argument)
+        # get and show arguments
+        if is_url(argument):
+            seed_url = argument
+        elif argument == '-s':
+            choice = 1
+        elif argument == '-m':
+            choice = 2    
 
-    print("Web scraping has begun")
-    result = browse_and_scrape(seed_url)
+        # print(is_url(argument))
+        # print(argument)
+
+    print(seed_url)
+
+    print(f"Web {seed_url} scraping has begun")
+    print("----------------------------------")
+    result = browse_and_scrape(seed_url, choice)
     if result == True:
+        print("----------------------------------")
         print("Web scraping is now complete!")
     else:
         print(f"Oops, That doesn't seem right!!! - {result}")                        
